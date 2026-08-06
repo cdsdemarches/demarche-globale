@@ -70,23 +70,23 @@
             <div class="row g-3">
               <div class="col-md-6">
                 <label for="prenom" class="form-label">Prénom *</label>
-                <input type="text" class="form-control" id="prenom" name="Prénom" placeholder="Votre prénom" required>
+                <input type="text" class="form-control" id="prenom" name="prenom" placeholder="Votre prénom" required>
               </div>
               <div class="col-md-6">
                 <label for="nom" class="form-label">Nom *</label>
-                <input type="text" class="form-control" id="nom" name="Nom" placeholder="Votre nom" required>
+                <input type="text" class="form-control" id="nom" name="nom" placeholder="Votre nom" required>
               </div>
               <div class="col-md-6">
                 <label for="email" class="form-label">Adresse e-mail *</label>
-                <input type="email" class="form-control" id="email" name="Email" placeholder="vous@exemple.com" required>
+                <input type="email" class="form-control" id="email" name="email" placeholder="vous@exemple.com" required>
               </div>
               <div class="col-md-6">
                 <label for="telephone" class="form-label">Téléphone</label>
-                <input type="tel" class="form-control" id="telephone" name="Téléphone" placeholder="06 00 00 00 00">
+                <input type="tel" class="form-control" id="telephone" name="telephone" placeholder="06 00 00 00 00">
               </div>
               <div class="col-12">
                 <label for="demarche" class="form-label">Démarche concernée *</label>
-                <select class="form-select" id="demarche" name="Démarche" required>
+                <select class="form-select" id="demarche" name="demarche" required>
                   <option value="" selected disabled>-- Choisissez la démarche --</option>
                   <option>Statut Commerçant / Profession libérale</option>
                   <option>Renouvellement titre Commerçant / Libéral</option>
@@ -103,11 +103,11 @@
               </div>
               <div class="col-12">
                 <label for="message" class="form-label">Votre message *</label>
-                <textarea class="form-control" id="message" name="Message" rows="5" placeholder="Décrivez brièvement votre situation..." required></textarea>
+                <textarea class="form-control" id="message" name="message" rows="5" placeholder="Décrivez brièvement votre situation..." required></textarea>
               </div>
               <div class="col-12">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="rgpd" required>
+                  <input class="form-check-input" type="checkbox" id="rgpd" name="consentement_rgpd" value="Oui" required>
                   <label class="form-check-label small text-muted-dg" for="rgpd">
                     J'accepte que mes informations soient utilisées uniquement pour me recontacter au sujet de ma demande.
                   </label>
@@ -255,16 +255,23 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="js/main.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function () {
   const FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/ajax/cdsdemarches@gmail.com';
   const form = document.getElementById('contactForm');
   const statusEl = document.getElementById('formStatus');
   const submitBtn = document.getElementById('submitBtn');
+
+  if (!form || !statusEl || !submitBtn) {
+    console.error('Erreur : éléments du formulaire introuvables.');
+    return;
+  }
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     statusEl.innerHTML = '';
 
     if (!form.checkValidity()) {
+      form.classList.add('was-validated');
       form.reportValidity();
       return;
     }
@@ -273,28 +280,48 @@
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Envoi en cours...';
 
+    const payload = {
+      prenom: document.getElementById('prenom').value.trim(),
+      nom: document.getElementById('nom').value.trim(),
+      email: document.getElementById('email').value.trim(),
+      telephone: document.getElementById('telephone').value.trim(),
+      demarche: document.getElementById('demarche').value,
+      message: document.getElementById('message').value.trim(),
+      consentement_rgpd: document.getElementById('rgpd').checked ? 'Oui' : 'Non',
+      _subject: 'Nouveau contact — Démarche Globale',
+      _captcha: 'false',
+      _template: 'table'
+    };
+
     try {
-      const formData = new FormData(form);
       const response = await fetch(FORMSUBMIT_ENDPOINT, {
         method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload)
       });
-      const data = await response.json().catch(() => ({}));
 
-      if (response.ok && (data.success === 'true' || data.success === true)) {
+      const data = await response.json().catch(() => ({}));
+      console.log('Réponse FormSubmit :', data);
+
+      if (response.ok && (data.success === true || data.success === 'true')) {
         statusEl.innerHTML = '<div class="alert-success-dg"><i class="bi bi-check-circle me-2"></i>Votre message a bien été envoyé. Nous vous répondrons sous 24 h ouvrées.</div>';
         form.reset();
+        form.classList.remove('was-validated');
       } else {
-        throw new Error(data.message || 'Erreur');
+        throw new Error(data.message || 'FormSubmit a refusé la requête.');
       }
     } catch (err) {
-      statusEl.innerHTML = '<div class="alert-error-dg"><i class="bi bi-exclamation-triangle me-2"></i>L\'envoi a échoué. Merci de nous joindre directement par e-mail à <a href="mailto:contact@demarche-globale.fr">contact@demarche-globale.fr</a> ou par téléphone au <a href="tel:+33745065939">+33 7 45 06 59 39</a>.</div>';
+      console.error('Erreur lors de l’envoi :', err);
+      statusEl.innerHTML = '<div class="alert-error-dg"><i class="bi bi-exclamation-triangle me-2"></i>L'envoi a échoué. Merci de nous joindre directement par e-mail à <a href="mailto:contact@demarche-globale.fr">contact@demarche-globale.fr</a> ou par téléphone au <a href="tel:+33745065939">+33 7 45 06 59 39</a>.</div>';
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalBtn;
     }
   });
+});
 </script>
 </body>
 </html>
