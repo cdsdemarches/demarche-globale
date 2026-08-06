@@ -61,11 +61,9 @@
           <div id="formStatus" class="mb-3"></div>
           
           <form id="contactForm" novalidate>
-            <!-- Hidden FormSubmit config -->
+            <!-- Config Formspree -->
             <input type="hidden" name="_subject" value="Nouveau contact — Démarche Globale">
-            <input type="hidden" name="_captcha" value="false">
-            <input type="hidden" name="_template" value="table">
-            <input type="text" name="_honey" style="display:none">
+            <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="display:none">
 
             <div class="row g-3">
               <div class="col-md-6">
@@ -256,7 +254,9 @@
 <script src="js/main.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const FORMSUBMIT_ENDPOINT = 'https://formsubmit.co/ajax/cdsdemarches@gmail.com';
+  // Remplacez VOTRE_ID par l'identifiant du formulaire fourni par Formspree
+  // (tableau de bord Formspree > votre formulaire > "Integration" > endpoint).
+  const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mgawepjq';
   const form = document.getElementById('contactForm');
   const statusEl = document.getElementById('formStatus');
   const submitBtn = document.getElementById('submitBtn');
@@ -288,13 +288,11 @@ document.addEventListener('DOMContentLoaded', function () {
       demarche: document.getElementById('demarche').value,
       message: document.getElementById('message').value.trim(),
       consentement_rgpd: document.getElementById('rgpd').checked ? 'Oui' : 'Non',
-      _subject: 'Nouveau contact — Démarche Globale',
-      _captcha: 'false',
-      _template: 'table'
+      _subject: 'Nouveau contact — Démarche Globale'
     };
 
     try {
-      const response = await fetch(FORMSUBMIT_ENDPOINT, {
+      const response = await fetch(FORMSPREE_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -304,18 +302,21 @@ document.addEventListener('DOMContentLoaded', function () {
       });
 
       const data = await response.json().catch(() => ({}));
-      console.log('Réponse FormSubmit :', data);
+      console.log('Réponse Formspree :', data);
 
-      if (response.ok && (data.success === true || data.success === 'true')) {
+      if (response.ok) {
         statusEl.innerHTML = '<div class="alert-success-dg"><i class="bi bi-check-circle me-2"></i>Votre message a bien été envoyé. Nous vous répondrons sous 24 h ouvrées.</div>';
         form.reset();
         form.classList.remove('was-validated');
       } else {
-        throw new Error(data.message || 'FormSubmit a refusé la requête.');
+        const detail = Array.isArray(data.errors)
+          ? data.errors.map(function (er) { return er.message; }).join(', ')
+          : (data.error || 'Formspree a refusé la requête.');
+        throw new Error(detail);
       }
     } catch (err) {
       console.error('Erreur lors de l’envoi :', err);
-      statusEl.innerHTML = '<div class="alert-error-dg"><i class="bi bi-exclamation-triangle me-2"></i>L'envoi a échoué. Merci de nous joindre directement par e-mail à <a href="mailto:contact@demarche-globale.fr">contact@demarche-globale.fr</a> ou par téléphone au <a href="tel:+33745065939">+33 7 45 06 59 39</a>.</div>';
+      statusEl.innerHTML = '<div class="alert-error-dg"><i class="bi bi-exclamation-triangle me-2"></i>L\'envoi a échoué. Merci de nous joindre directement par e-mail à <a href="mailto:contact@demarche-globale.fr">contact@demarche-globale.fr</a> ou par téléphone au <a href="tel:+33745065939">+33 7 45 06 59 39</a>.</div>';
     } finally {
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalBtn;
